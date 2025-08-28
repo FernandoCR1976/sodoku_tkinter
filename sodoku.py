@@ -95,7 +95,7 @@ class SodokuGame:
         self.enable_input_buttons()
 
     def populate_board(self):
-        # Rellena el tablero segun el nivbel de juego
+        # Rellena el tablero segun el nivel de juego
 
 
         for r in range(9):
@@ -111,5 +111,163 @@ class SodokuGame:
                     entry.config(fg='black')
                 entry.config(bg='white')
 
+    def on_cell_click(self,r,c):
+        if self.original_board is None:
+            return
+        if self.selected_cell[0] is not None:
+            prev_r , prev_c = self.selected_cell
+
+            if(prev_r,prev_c) != (r,c):
+                self.cells[(prev_r,prev_c)].config(bg='white')
+        self.selected_cell = (r,c)
+        self.cells[(r,c)].config(bg="lightblue")
 
 
+    def enter_number(self,num):
+        if self.selected_cell[0] is not None:
+            r, c = self.selected_cell
+            if self.original_board[r][c] == 0:
+                entry = self.cells[(r,c)]
+                entry.delete(0, tk.END)
+                entry.insert(0, str(num))
+                self.check_number(r,c,num)# Falta hacer este metodo
+            else:
+                messagebox.showwarning("Sodoku", "No puedes cambiar los numeros iniciales del SODOKU")
+
+    def clear_cell(self):
+        if self.selected_cell[0] is not None:
+            r, c = self.selected_cell
+            if self.original_board[r][c] == 0:
+                entry = self.cells[(r,c)]
+                entry.delete(0, tk.END)
+                self.current_board[r][c] = 0
+                entry.config(fg="black")
+
+    def check_number(self, r,c,num):
+        # Verificar si el numero ingresado es correcto
+
+        if self.solution_board[r][c] == num:
+            self.current_board[r][c] = num
+            self.cells[(r,c)].config(fg="green")
+            if self.is_game_over():
+                self.game_won()
+            else:
+                self.errors += 1
+                self.error_label.config(text=f'Errores: {self.errors}/{self.max_errors}')
+                self.cells[(r,c)].config(fg="red")
+                if self.errors >= self.max_errors:
+                    self.game_lost()
+
+    def is_game_over(self):
+        for r in range(9):
+            for c in range(9):
+                if self.current_board[r][c] == 0:
+                    return False
+        return True
+
+    def game_won(self):
+        messagebox.showinfo("Sodoku","!Felicidades, gano el juego!")
+        self.disable_input_buttons()
+        self.restart_button.config(state=tk.NORMAL)
+
+    def game_lost(self):
+        messagebox.showinfo("Sodoku",f'Haz superado los {self.max_errors} errores.... :..(')
+        self.disable_input_buttons()
+        self.show_solution()
+        self.restart_button.config(state=tk.NORMAL)
+
+    def show_solution(self):
+
+        for r in range(9):
+            for c in range(9):
+                entry = self.cells[(r,c)]
+                entry.config(state=tk.NORMAL)
+                entry.delete(0, tk.END)
+                entry.insert(0, str(self.solution_board[r][c]))
+                entry.config(fg='purple', state="readonly")
+
+    def disiable_input_buttons(self):
+        for button in self.number_buttons:
+            button.config(state=tk.DISABLED)
+        self.clear_button.config(state=tk.DISABLED)
+
+        for r in range(9):
+            for c in range(9):
+                self.cells[(r,c)].config(state="readonly")
+
+    def enable_input_buttons(self):
+        for button in self.number_buttons:
+            button.config(state=tk.NORMAL)
+        self.clear_button.config(state=tk.NORMAL)
+        for r in range(9):
+            for c in range(9):
+                if self.original_board[r][c] == 0:
+                    self.cells[(r,c)].config(state=tk.NORMAL)
+
+    def reset_game(self):
+        self.errors = 0
+        self.error_label.config(text=f'Errores: {self.errors}/{self.max_errors}')
+        self.original_board = None
+        self.current_board = None
+        self.solution_board = None
+        self.selected_cell = (None,None)
+        self.disiable_input_buttons()
+        self.restart_button.config(state=tk.DISABLED)
+
+        for r in range(9):
+            for c in range(9):
+                entry = self.cells[(r,c)]
+                entry.config(state=tk.NORMAL)
+                entry.delete(0,tk.END)
+                entry.config(bg="white", fg="black")
+
+    def find_empty(self,board):
+        for r in range(9):
+            for c in range(9):
+                if board[r][c] == 0 :
+                    return (r,c)
+                
+        return None
+    
+
+    #Metodo de verificacion si el numero ingresado es correcto
+    def is_valid(self,board,num,pos):
+        row, col = pos
+
+         #revisar cada fila
+        for c in range(9):
+            if board[row][c] == num and col != c:
+                return False
+        for r in range(9):
+            if board[r][col] == num and row != r:
+                return False
+            
+        box_x = col // 3
+        box_y = row // 3
+
+        for r in range(box_y * 3, box_y * 3 + 3):
+            for c in range (box_x * 3, box_x * 3 + 3):
+                if board[r][c] == num and (r,c) != pos:
+                    return False
+        return True
+        
+     
+         
+             
+    def solve_sudoku(self,board):
+        find = self.find_empty(board)
+
+        if not find:
+            return True
+        else:
+            row,col = find
+
+        for i in range(1,10):
+            if self.is_valid(board,i,(row,col)):
+                board[row][col] = i
+
+                if self.solve_sudoku(board):
+                    return True  
+                board[row][col] = 0
+        
+        return False

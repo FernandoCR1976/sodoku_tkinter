@@ -30,7 +30,7 @@ class SodokuGame:
         self.level_frame = tk.Frame(master)
         self.level_frame.pack(pady=10)
 
-        tk.Button(self.level_frame, text="Basico", command= lambda:self.start_game("Basico"),width=10, height=2).pack(side=tk.LEFT, padx=5)
+        tk.Button(self.level_frame, text="Basico", command=lambda:self.start_game("Basico"),width=10, height=2).pack(side=tk.LEFT, padx=5)
         tk.Button(self.level_frame, text="Intermedio", command= lambda:self.start_game("Intermedio"),width=10, height=2).pack(side=tk.LEFT, padx=5)
         tk.Button(self.level_frame, text="Avanzado", command= lambda:self.start_game("Avanzado"),width=10, height=2).pack(side=tk.LEFT, padx=5)
 
@@ -88,7 +88,7 @@ class SodokuGame:
 
         #Generar un nuevo tablero de SODOKU segun el nivel seleccionado
 
-        self.generate_sodoku_puzzle(self.boards[level])
+        self.generate_sudoku_puzzle(self.boards[level])
 
         self.populate_board()
         self.restart_button.config(state=tk.NORMAL)
@@ -186,7 +186,7 @@ class SodokuGame:
                 entry.insert(0, str(self.solution_board[r][c]))
                 entry.config(fg='purple', state="readonly")
 
-    def disiable_input_buttons(self):
+    def disable_input_buttons(self):
         for button in self.number_buttons:
             button.config(state=tk.DISABLED)
         self.clear_button.config(state=tk.DISABLED)
@@ -253,7 +253,7 @@ class SodokuGame:
         
      
          
-             
+    # Esto es un BACK-TRACKING       
     def solve_sudoku(self,board):
         find = self.find_empty(board)
 
@@ -271,3 +271,59 @@ class SodokuGame:
                 board[row][col] = 0
         
         return False
+
+    def generate_sudoku_puzzle(self,num_cells_to_remove):
+
+        full_board = [[0 for _ in range(9)] for _ in range(9)]  #Crea un tablero completamente vacio
+
+        #Necesito llenar el tablero de forma aleatoria respetando las reglas
+
+        self._fill_board_randomly(full_board)
+
+        self.solution_board = [row[:] for row in full_board] #Guardo una copia del tablero resuelto
+        
+        puzzle_board = [row[:] for row in self.solution_board]
+
+        all_cells = [(r,c) for r in range(9) for c in range(9)]
+        random.shuffle(all_cells)
+
+        removed_count = 0
+
+        for r,c in all_cells:
+            if removed_count < num_cells_to_remove:
+                puzzle_board[r][c] = 0
+                removed_count += 1
+
+            else:
+                break
+
+        self.original_board = [row[:] for row in puzzle_board]
+        self.current_board = [row[:] for row in puzzle_board]
+
+    def _fill_board_randomly(self,board):
+
+        find = self.find_empty(board)
+        if not find:
+            return True # Existe un tablero lleno  y valido
+        
+        else:
+            row, col = find #Otro uso del backtracking
+
+        numbers = list(range(1,10))
+        random.shuffle(numbers)
+
+        for num in numbers:
+            if self.is_valid(board,num,(row,col)):
+                board[row][col] = num
+
+                if self._fill_board_randomly(board):
+                    return True
+                
+                board[row][col] = 0
+        return False
+    
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = SodokuGame(root)
+    root.mainloop()
+        
